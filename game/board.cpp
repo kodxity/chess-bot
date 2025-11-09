@@ -67,24 +67,27 @@ bool Board::isSquareAttacked(int square, int bySide) const {
     uint64_t occ = occupancy[BOTH].board; // occupancy bitboard of all pieces
 
     // --- Pawns ---
-    if (bySide == WHITE) {
-        /*
-        A pawn attacks the square to its top left or right. By the mapping
-        of position to `square` = [0,...,63], a pawn will attack our current square
-        if its to the lower left or right of our square. This corresponds to square-7
-        and square-9 respectively for white. Thus, we check if a pawn exists there
-        by ANDing bitboard of that square with the white pawn's bitboard. For black
-        pawns, it's just the same thing but with different cooridnates (55,57,+9,+7)
-        since it's on the opposite side.
-        */
-        if ((square >= 9 && (pieces[P].board & (1ULL << (square - 9)))) ||
-            (square >= 7 && (pieces[P].board & (1ULL << (square - 7)))))
-            return true;
-    } else {
-        if ((square <= 55 && (pieces[p].board & (1ULL << (square + 9)))) ||
-            (square <= 57 && (pieces[p].board & (1ULL << (square + 7)))))
-            return true;
+    /*
+    A pawn attacks the square to its top left or right. By the mapping
+    of position to `square` = [0,...,63], a pawn will attack our current square
+    if its to the lower left or right of our square. This corresponds to square-7
+    and square-9 respectively for white. Thus, we check if a pawn exists there
+    by ANDing bitboard of that square with the white pawn's bitboard. For black
+    pawns, it's just the same thing but with different cooridnates (55,57,+9,+7)
+    since it's on the opposite side.
+    */
+    // Also must check for wrap around error
+    int file = square % 8;
+    if(bySide == WHITE){
+        if(file > 0 && square >= 9 && (pieces[P].board & (1ULL << (square - 9)))) return true;
+        if(file < 7 && square >= 7 && (pieces[P].board & (1ULL << (square - 7)))) return true;
     }
+    else{
+        if(file < 7 && square <= 55 && (pieces[p].board & (1ULL << (square + 9)))) return true;
+        if(file > 0 && square <= 57 && (pieces[p].board & (1ULL << (square + 7)))) return true;
+    }
+
+
 
     // --- Knights ---
     uint64_t knights = pieces[bySide == WHITE ? N : n].board;
@@ -94,9 +97,10 @@ bool Board::isSquareAttacked(int square, int bySide) const {
     
     // go through each knightOffset and check if there is an opponent knight 
     // there that can move to our square 
+    // check out of bounds and wrap around error
     for (int o : knightOffsets) {
         int to = square + o;
-        if (to >= 0 && to < 64 && (knights & (1ULL << to)))
+        if (to >= 0 && to < 64 && (knights & (1ULL << to)) && std::abs((to % 8) - (square % 8)) <= 2)
             return true;
     }
 
@@ -108,7 +112,8 @@ bool Board::isSquareAttacked(int square, int bySide) const {
     // move to our square 
     for (int o : kingOffsets) {
         int to = square + o;
-        if (to >= 0 && to < 64 && (king & (1ULL << to)))
+        // check out of bounds and wrap around error
+        if (to >= 0 && to < 64 && (king & (1ULL << to)) && std::abs((to % 8) - (square % 8)) <= 1)
             return true;
     }
 
@@ -146,16 +151,16 @@ bool Board::isSquareAttacked(int square, int bySide) const {
     int lineDirs[4] = {8, -8, 1, -1}; // values to add or subtract to get to next square
     
     // Go through each direction (N,E,S,W)
-    for (int dir : lineDirs) {
+    for(int dir : lineDirs){
         // for each square that is on the board, that is a valid straight move
         for (int sq = square + dir;
             sq >= 0 && sq < 64 &&
             std::abs((sq % 8) - ((sq - dir) % 8)) <= 1;
             sq += dir) {
             // check if there is a valid attacker (rook or queen) there
-            uint64_t mask = 1ULL << sq;
-            if (occ & mask) {
-                if (lineAttackers & mask){ // opponent piece
+
+            if(occ & (1ULL << sq)){
+                if(lineAttackers & ( 1ULL << sq)){ // opponent piece
                     return true;
                 }
                 else{ // our own piece, so we don't have to continue anymore

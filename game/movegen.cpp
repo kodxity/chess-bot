@@ -31,8 +31,9 @@ std::vector<Move> MoveGenerator::generateMoves(const Board& board){
     for(auto& move : moves){
         Board copy = board; // create a copy of board
         copy.makeMove(move); // make move 
-        if (!copy.isKingInCheck(board.turn))  // doesn't leave king in check
+        if (!copy.isKingInCheck(board.turn)){ // doesn't leave king in check
             legal.push_back(move); // move is legal
+        }  
     }
     return legal;
 }
@@ -46,8 +47,6 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
     // Pawn move offsets (depend on color) = {white offset, black offset}
     const int pawnPush[2] = {8, -8}; // go up 1 square: white moves +8, black -8
     const int pawnDoublePush[2] = {16, -16}; // go up 2 squares 
-    const int pawnAttackLeft[2] = {7, -9}; // go to top left
-    const int pawnAttackRight[2] = {9, -7}; // go to top right
 
     int direction = (side == WHITE) ? 8 : -8; // sq + direction = next square that pawn moves to
     int startRank = (side == WHITE) ? 1 : 6; // start rank of pawn (0 indexed)
@@ -86,8 +85,11 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
         // Captures
         for(int captureDir : {7, 9}){
             int toCap = (side == WHITE) ? from + captureDir : from - captureDir; // capture by side
-            if(toCap < 0 || toCap >= 64) continue; // capture is invalid (goes out of board)
+            // wrap around error
+            int fromFile = from % 8;
+            int toFile = toCap % 8;
 
+            if(toCap < 0 || toCap >= 64 || abs(toFile - fromFile) > 1) continue; // capture is invalid (goes out of board)
             if(board.occupancy[!side].board & (1ULL << toCap)){ // there exists piece for capture
                 moves.emplace_back(from, toCap, CAPTURE, (side == WHITE ? P : p));
             }
@@ -99,7 +101,10 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
             int epTarget = board.enPassantSquare;
             int leftCap = (side == WHITE) ? from + 7 : from - 9; // top left pawn square
             int rightCap = (side == WHITE) ? from + 9 : from - 7; // top right pawn square
-            
+            // wrap around error
+            int fromFile = from % 8;
+            int toFile = epTarget % 8;
+            if(epTarget < 0 || epTarget >= 64 || abs(toFile - fromFile) > 1) continue;
             if(epTarget == leftCap || epTarget == rightCap){ // enPassant exists at square
                 moves.emplace_back(from, epTarget, EN_PASSANT, P);
             }
@@ -320,13 +325,17 @@ void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& mov
     if(side == WHITE){
         // Kingside (K)
         if(board.castlingRights & 1){
-            if(!(all & ((1ULL << F1) | (1ULL << G1)))){ // nothing in between
+            if(!(all & ((1ULL << F1) | (1ULL << G1))) &&
+                (!board.isSquareAttacked(F1, !side) 
+              && !board.isSquareAttacked(G1, !side))){ // castling path is empty and not attacked
                 moves.emplace_back(E1, G1, KING_CASTLE, K);
             }
         }
         // Queenside (Q)
         if(board.castlingRights & 2){
-            if(!(all & ((1ULL << D1) | (1ULL << C1) | (1ULL << B1)))){ // nothing in between
+            if(!(all & ((1ULL << D1) | (1ULL << C1) | (1ULL << B1))) &&
+                (!board.isSquareAttacked(D1, !side) 
+              && !board.isSquareAttacked(C1, !side))){ // castling path is empty and not attacked
                 moves.emplace_back(E1, C1, QUEEN_CASTLE, K);
             }
         }
@@ -334,13 +343,17 @@ void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& mov
     else{
         // Kingside (k)
         if(board.castlingRights & 4){
-            if(!(all & ((1ULL << F8) | (1ULL << G8)))){ // nothing in between
+            if(!(all & ((1ULL << F8) | (1ULL << G8)))&&
+                (!board.isSquareAttacked(F8, !side) 
+              && !board.isSquareAttacked(G8, !side))){ // castling path is empty and not attacked
                 moves.emplace_back(E8, G8, KING_CASTLE, k);
             }
         }
         // Queenside (q)
         if(board.castlingRights & 8){
-            if(!(all & ((1ULL << D8) | (1ULL << C8) | (1ULL << B8)))){ // nothing in between
+            if(!(all & ((1ULL << D8) | (1ULL << C8) | (1ULL << B8)))&&
+                (!board.isSquareAttacked(D8, !side) 
+              && !board.isSquareAttacked(C8, !side))){ // castling path is empty and not attacked
                 moves.emplace_back(E8, C8, QUEEN_CASTLE, k);
             }
         }

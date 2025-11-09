@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(RIPDANYA_ChessBot)
+project(Chess-Bot)
 
 # Use C++17 standard
 set(CMAKE_CXX_STANDARD 17)
@@ -10,12 +10,13 @@ add_compile_options(-Wall -Wextra -O2)
 
 # Add your source files
 set(SOURCES
-    main.cpp
+    tests/perft.cpp
     game/bitboard.cpp
     game/board.cpp
     game/movegen.cpp  
+
 )
 
 # Create executable target
-add_executable(ChessBot ${SOURCES})
+add_executable(Chess-Bot ${SOURCES})
 
