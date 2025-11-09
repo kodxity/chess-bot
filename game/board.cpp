@@ -5,17 +5,18 @@
 
 // Constructor 
 Board::Board(){
+    // initialize by clearing board
     clear();
 }
 
 
 void Board::clear(){
     // Clear all piece bitboards
-    for (int i = 0; i < 12; i++)
+    for(int i = 0; i < 12; i++)
         pieces[i] = Bitboard(0ULL);
 
     // Clear occupancy bitboards
-    for (int i = 0; i < 3; i++)
+    for(int i = 0; i < 3; i++)
         occupancy[i] = Bitboard(0ULL);
 
     turn = WHITE;
@@ -25,19 +26,19 @@ void Board::clear(){
 
 // Set and Remove Pieces
 void Board::setPiece(int square, Piece piece){
-    if (square < A1 || square > H8) return; // ensure valid square
+    if(square < A1 || square > H8) return; // ensure valid square
     pieces[piece].setBit(square);
 }
 
 void Board::removePiece(int square, Piece piece){
-    if (square < A1 || square > H8) return; 
+    if(square < A1 || square > H8) return; // ensure valid square
     pieces[piece].clearBit(square);
 }
 
 // Get Piece at Square 
 Piece Board::getPiece(int square) const {
-    if (square < A1 || square > H8) return NO_PIECE;
-    for (int p = P; p <= k; p++) {
+    if(square < A1 || square > H8) return NO_PIECE; // ensure valid square
+    for(int p = P; p <= k; p++){
         if (pieces[p].getBit(square))
             return static_cast<Piece>(p);
     }
@@ -61,23 +62,248 @@ void Board::updateOccupancy(){
     occupancy[BOTH].board = occupancy[WHITE].board | occupancy[BLACK].board;
 }
 
-// Decrypt FEN
-void Board::loadFEN(const std::string& fen) {
-    clear();
+// check if given square is attacked by given side
+bool Board::isSquareAttacked(int square, int bySide) const {
+    uint64_t occ = occupancy[BOTH].board; // occupancy bitboard of all pieces
 
-    std::istringstream ss(fen);
+    // --- Pawns ---
+    if (bySide == WHITE) {
+        /*
+        A pawn attacks the square to its top left or right. By the mapping
+        of position to `square` = [0,...,63], a pawn will attack our current square
+        if its to the lower left or right of our square. This corresponds to square-7
+        and square-9 respectively for white. Thus, we check if a pawn exists there
+        by ANDing bitboard of that square with the white pawn's bitboard. For black
+        pawns, it's just the same thing but with different cooridnates (55,57,+9,+7)
+        since it's on the opposite side.
+        */
+        if ((square >= 9 && (pieces[P].board & (1ULL << (square - 9)))) ||
+            (square >= 7 && (pieces[P].board & (1ULL << (square - 7)))))
+            return true;
+    } else {
+        if ((square <= 55 && (pieces[p].board & (1ULL << (square + 9)))) ||
+            (square <= 57 && (pieces[p].board & (1ULL << (square + 7)))))
+            return true;
+    }
+
+    // --- Knights ---
+    uint64_t knights = pieces[bySide == WHITE ? N : n].board;
+    
+    // Offset = piece can move from square to square + Offset[i]
+    static const int knightOffsets[8] = {17, 15, 10, 6, -17, -15, -10, -6}; 
+    
+    // go through each knightOffset and check if there is an opponent knight 
+    // there that can move to our square 
+    for (int o : knightOffsets) {
+        int to = square + o;
+        if (to >= 0 && to < 64 && (knights & (1ULL << to)))
+            return true;
+    }
+
+    // --- King (adjacent squares) ---
+    uint64_t king = pieces[bySide == WHITE ? K : k].board;
+    static const int kingOffsets[8] = {8, -8, 1, -1, 9, 7, -9, -7};
+    
+    // go through each kingOffset and check if the opponent king can 
+    // move to our square 
+    for (int o : kingOffsets) {
+        int to = square + o;
+        if (to >= 0 && to < 64 && (king & (1ULL << to)))
+            return true;
+    }
+
+    // --- Diagonal attacks (bishops/queens) ---
+    // Bitboard of bishops + queens
+    uint64_t diagAttackers = pieces[bySide == WHITE ? B : b].board |
+                             pieces[bySide == WHITE ? Q : q].board;
+    int diagDirs[4] = {9, 7, -9, -7}; // values to add or subtract to get to next square
+    
+    // Go through each direction (NE,NW,SE,SW)
+    for (int dir : diagDirs) {
+        // for each square that is on the board, that is a valid diagonal move
+        for (int sq = square + dir;
+            sq >= 0 && sq < 64 &&
+            std::abs((sq % 8) - ((sq - dir) % 8)) == 1;
+            sq += dir) {
+            // check if there is a valid attacker (bishop or queen) there
+            uint64_t mask = 1ULL << sq;
+            if (occ & mask) { // a piece is there
+                if (diagAttackers & mask){ // opponent piece
+                    return true;
+                }
+                else{ // our own piece, so we don't have to continue anymore
+                    break;
+                }
+                
+            }
+        }
+    }
+
+    // --- Straight attacks (rooks/queens) ---
+    // Bitboard of rooks + queens
+    uint64_t lineAttackers = pieces[bySide == WHITE ? R : r].board |
+                             pieces[bySide == WHITE ? Q : q].board; 
+    int lineDirs[4] = {8, -8, 1, -1}; // values to add or subtract to get to next square
+    
+    // Go through each direction (N,E,S,W)
+    for (int dir : lineDirs) {
+        // for each square that is on the board, that is a valid straight move
+        for (int sq = square + dir;
+            sq >= 0 && sq < 64 &&
+            std::abs((sq % 8) - ((sq - dir) % 8)) <= 1;
+            sq += dir) {
+            // check if there is a valid attacker (rook or queen) there
+            uint64_t mask = 1ULL << sq;
+            if (occ & mask) {
+                if (lineAttackers & mask){ // opponent piece
+                    return true;
+                }
+                else{ // our own piece, so we don't have to continue anymore
+                    break;
+                }
+            }
+        }
+    }
+
+    return false; // no attacker found
+}
+
+// Check if given side's king is in check
+bool Board::isKingInCheck(int side) const{
+    uint64_t kingBB = pieces[side == WHITE ? K : k].board;
+    if(!kingBB) return false; // no king
+    int kingSq = __builtin_ctzll(kingBB); // get bit of king's square
+    return isSquareAttacked(kingSq, !side); // check if king's square is under attack
+}
+
+
+// Apply a move to the board
+bool Board::makeMove(const Move& move){
+    int from = move.from;
+    int to = move.to;
+    Piece piece = move.piece; // piece on current square
+    int side = turn;
+
+    // --- Reset en passant ---
+    enPassantSquare = NO_SQUARE;
+
+    // --- Handle captures ---
+    if(move.flag == CAPTURE || move.flag == EN_PASSANT){
+        int capSquare = to;
+
+        // En passant capture happens right behind target (-8 or +8)
+        if (move.flag == EN_PASSANT)
+            capSquare += (side == WHITE ? -8 : 8);
+
+        Piece capturedPiece = getPiece(capSquare); 
+        if (capturedPiece != NO_PIECE)
+            removePiece(capSquare, capturedPiece);
+    }
+
+    // --- Move the piece ---
+    removePiece(from, piece);
+
+    // --- Move logic ---
+    switch (move.flag){
+        case DOUBLE_PAWN_PUSH:
+            enPassantSquare = (side == WHITE) ? (to - 8) : (to + 8);
+            setPiece(to, piece);
+            break;
+
+        case KING_CASTLE:
+            // move king
+            setPiece(to, piece);
+
+            // Move rook 
+            if(to == G1){ // White kingside
+                removePiece(H1, R); 
+                setPiece(F1, R); 
+            } 
+            if(to == G8){ // Black kingside
+                removePiece(H8, r); 
+                setPiece(F8, r); 
+            } 
+            break;
+        case QUEEN_CASTLE:
+            // move king
+            setPiece(to, piece);
+
+            // Move rook
+            if(to == C1){ // White queenside
+                removePiece(A1, R); 
+                setPiece(D1, R); 
+            } 
+            if(to == C8){ // Black queenside
+                removePiece(A8, r); 
+                setPiece(D8, r); 
+            } 
+            break;
+
+        case PROMOTION_QUEEN:
+        case PROMOTION_ROOK:
+        case PROMOTION_BISHOP:
+        case PROMOTION_KNIGHT:
+            {
+                // Replace pawn with new piece
+                Piece promoPiece;
+                switch(move.flag){
+                    case PROMOTION_QUEEN: promoPiece = (side == WHITE ? Q : q); break;
+                    case PROMOTION_ROOK: promoPiece = (side == WHITE ? R : r); break;
+                    case PROMOTION_BISHOP: promoPiece = (side == WHITE ? B : b); break;
+                    case PROMOTION_KNIGHT: promoPiece = (side == WHITE ? N : n); break;
+                }
+                setPiece(to, promoPiece);
+            }
+            break;
+
+        default:
+            // normal or capture
+            setPiece(to, piece);
+            break;
+    }
+
+    // --- Update castling rights ---
+    // King moved
+    if (piece == K) castlingRights &= ~3;     // remove white K/Q rights
+    if (piece == k) castlingRights &= ~12;    // remove black k/q rights
+
+    // Rook moved or captured
+    if (from == H1 || to == H1) castlingRights &= ~1; // remove white K
+    if (from == A1 || to == A1) castlingRights &= ~2; // remove white Q
+    if (from == H8 || to == H8) castlingRights &= ~4; // remove black k
+    if (from == A8 || to == A8) castlingRights &= ~8; // remove black q
+
+    // --- Switch side ---
+    turn = (turn == WHITE ? BLACK : WHITE);
+
+    updateOccupancy();
+    return true;
+}
+
+
+
+
+// Decrypt FEN and load it onto the board
+void Board::loadFEN(const std::string& fen){
+    // Example: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+    clear(); // clear board
+    std::istringstream ss(fen); // turn string into input string stream (so we can treat like cin)
     std::string boardPart, side, castling, enPassant;
     int halfmove = 0, fullmove = 1;
 
-    ss >> boardPart >> side >> castling >> enPassant >> halfmove >> fullmove;
+    // read from string (like cin, input separated by space)
+    ss >> boardPart >> side >> castling >> enPassant >> halfmove >> fullmove; 
 
-    int square = A8; // top-left corner
-    for (char c : boardPart) {
-        if (c == '/') {
+    int square = A8; // start from top-left corner
+    for(char c : boardPart){
+        if(c == '/'){
             square -= 16; // move to next rank down
-        } else if (isdigit(c)) {
+        }
+        else if (isdigit(c)){
             square += c - '0'; // skip empty squares
-        } else {
+        }
+        else{ // piece here (not empty)
             Piece piece = NO_PIECE;
             switch (c) {
                 case 'P': piece = P; break;
@@ -93,9 +319,8 @@ void Board::loadFEN(const std::string& fen) {
                 case 'q': piece = q; break;
                 case 'k': piece = k; break;
             }
-            if (piece != NO_PIECE)
-                setPiece(square, piece);
-            square++;
+            setPiece(square, piece); // set square to this piece
+            square++; // move to next square
         }
     }
 
@@ -110,11 +335,12 @@ void Board::loadFEN(const std::string& fen) {
     if (castling.find('q') != std::string::npos) castlingRights |= 8;
 
     // En passant
-    if (enPassant != "-") {
+    if(enPassant != "-"){
         int file = enPassant[0] - 'a';
         int rank = enPassant[1] - '1';
         enPassantSquare = rank * 8 + file;
-    } else {
+    } 
+    else{
         enPassantSquare = NO_SQUARE;
     }
 
@@ -122,14 +348,14 @@ void Board::loadFEN(const std::string& fen) {
 }
 
 // Print Board
-void Board::printBoard() const {
-    for (int rank = 7; rank >= 0; rank--) {
+void Board::printBoard() const{
+    for(int rank = 7; rank >= 0; rank--){
         std::cout<<rank+1<<" ";
-        for (int file = 0; file < 8; file++) {
+        for(int file = 0; file < 8; file++){
             int sq = rank * 8 + file;
             Piece x = getPiece(sq);
             char c = '.';
-            switch (x) {
+            switch (x){
                 case P: c = 'P'; break;
                 case N: c = 'N'; break;
                 case B: c = 'B'; break;

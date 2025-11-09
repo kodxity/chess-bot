@@ -1,7 +1,6 @@
-chessbot testing using nn for chesshacks 2025
-wtf stronk???
-need 3rd member
+# NOSAChessBot
+Small Chess Bot to beat OSA's (and hopefully Waterloo's) strongest chess player.
+- chess bot testing using nn for chesshacks 2025
+- wtf stronk???
+- using a/b search + nnue eval + optimizations 
 
-2025-10-28
-- [ ] Make basic game work
-- [ ] Impl basic model

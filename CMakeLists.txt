@@ -13,6 +13,7 @@ set(SOURCES
     main.cpp
     game/bitboard.cpp
     game/board.cpp
+    game/movegen.cpp  
 )
 
 # Create executable target

@@ -10,25 +10,28 @@ Bitboard::Bitboard(uint64_t b):board(b){} // creates bitboard represented by b
 // Operations
 
 void Bitboard::setBit(int pos){
+    // make bit[pos] = 1
     board |= (1ULL << pos);
 }
 
 void Bitboard::clearBit(int pos){
+    // make bit[pos] = 0 (and everything else stays the same)
     board &= ~(1ULL << pos);
 }
 
-// Pop least significant bit (remove it)
+// remove least significant bit
 void Bitboard::popLSB(){
     board &= (board - 1);
 }
 
-
+// flip bit[pos]
 void Bitboard::flipBit(int pos){
     board ^= (1ULL << pos);
 }
 
 // Functions
 
+// get bit[pos]
 bool Bitboard::getBit(int pos) const{
     return board & (1ULL << pos);
 }
@@ -65,20 +68,21 @@ int Bitboard::getLSB() const{
 
 // Utilities
 
-// convert bitboard to s8x8 matrix of '1' = filled and '.' = empty
+// convert bitboard value to 8x8 matrix of '1' = filled and '.' = empty
 std::string Bitboard::toString(uint64_t bb){
-    std::string s;
+    // bb = bitboard value
+    std::string s; // string matrix
     for (int rank = 7; rank >= 0; rank--) {
         for (int file = 0; file < 8; file++) {
             int sq = rank * 8 + file;
-            s += (bb & (1ULL << sq)) ? "1 " : ". ";
+            s += (bb & (1ULL << sq)) ? "1 " : ". "; // add value to string
         }
-        s += "\n";
+        s += "\n"; 
     }
     return s;
 }
 
-// pritn board in terms of 8x8 matrix
+// print board in terms of 8x8 matrix
 void Bitboard::print() const{
     std::cout<<toString(board)<<std::endl;
 }
