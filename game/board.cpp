@@ -207,7 +207,7 @@ bool Board::makeMove(const Move& move){
 
     // --- Move the piece ---
     removePiece(from, piece);
-
+    removePiece(to, move.captured);
     // --- Move logic ---
     switch (move.flag){
         case DOUBLE_PAWN_PUSH:
@@ -262,7 +262,7 @@ bool Board::makeMove(const Move& move){
             break;
 
         default:
-            // normal or capture
+            // normal
             setPiece(to, piece);
             break;
     }
@@ -285,6 +285,105 @@ bool Board::makeMove(const Move& move){
     return true;
 }
 
+// unmake a move to the board
+bool Board::unmakeMove(const Move& move){
+    int from = move.from;
+    int to = move.to;
+    Piece piece = move.piece; // piece on current square
+    Piece capture = move.captured;
+    // --- Switch side ---
+    turn = (turn == WHITE ? BLACK : WHITE);
+    int side = turn;
+    
+    // --- Reset en passant ---
+    enPassantSquare = move.prevEnPassantSquare;
+    // --- Update castling rights ---
+    castlingRights = move.prevCastlingRights;
+
+    
+
+    
+
+    // --- Move logic ---
+    switch (move.flag){
+        case DOUBLE_PAWN_PUSH:
+            removePiece(to, piece);
+            break;
+
+        case KING_CASTLE:
+            // move king
+            removePiece(to, piece);
+
+            // Move rook 
+            if(to == G1){ // White kingside
+                removePiece(F1, R);
+                setPiece(H1, R); 
+            } 
+            if(to == G8){ // Black kingside
+                removePiece(F8, r); 
+                setPiece(H8, r); 
+            } 
+            break;
+        case QUEEN_CASTLE:
+            // move king
+            removePiece(to, piece);
+
+            // Move rook
+            if(to == C1){ // White queenside
+                removePiece(D1, R);
+                setPiece(A1, R); 
+            } 
+            if(to == C8){ // Black queenside
+                removePiece(D8, r); 
+                setPiece(A8, r); 
+            } 
+            break;
+
+        case PROMOTION_QUEEN:
+        case PROMOTION_ROOK:
+        case PROMOTION_BISHOP:
+        case PROMOTION_KNIGHT:
+            {
+                // Replace pawn with new piece
+                Piece promoPiece;
+                switch(move.flag){
+                    case PROMOTION_QUEEN: promoPiece = (side == WHITE ? Q : q); break;
+                    case PROMOTION_ROOK: promoPiece = (side == WHITE ? R : r); break;
+                    case PROMOTION_BISHOP: promoPiece = (side == WHITE ? B : b); break;
+                    case PROMOTION_KNIGHT: promoPiece = (side == WHITE ? N : n); break;
+                }
+                removePiece(to, promoPiece);
+            }
+            break;
+
+        default:
+            // normal 
+            removePiece(to, piece);
+            break;
+    }
+
+    setPiece(from, piece);
+    
+    // --- Handle captures ---
+    if(move.flag == CAPTURE || move.flag == EN_PASSANT){
+        int capSquare = to;
+
+        // En passant capture happens right behind target (-8 or +8)
+        if (move.flag == EN_PASSANT)
+            capSquare += (side == WHITE ? -8 : 8);
+
+        if (capture != NO_PIECE)
+            setPiece(capSquare, capture);
+    }
+    else{
+        setPiece(to, capture);
+    }
+
+    
+
+    updateOccupancy();
+    return true;
+}
 
 
 

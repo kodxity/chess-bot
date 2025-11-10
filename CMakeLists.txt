@@ -10,11 +10,14 @@ add_compile_options(-Wall -Wextra -O2)
 
 # Add your source files
 set(SOURCES
-    tests/perft.cpp
+    # tests/perft.cpp
+    main.cpp
+    engine/search.cpp
+    engine/eval.cpp
     game/bitboard.cpp
     game/board.cpp
     game/movegen.cpp  
-
+    
 )
 
 # Create executable target

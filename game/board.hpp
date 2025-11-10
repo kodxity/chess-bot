@@ -40,11 +40,12 @@ struct Move {
     int to;             // square where it moves
     MoveFlag flag;      // special info (like CAPTURE or PROMOTION)
     Piece piece;          // which piece moved
-    int captured;       // what was captured (-1 if none)
-
+    Piece captured;       // what was captured (-1 if none)
+    int prevEnPassantSquare; // store previous en passant square
+    int prevCastlingRights;
     // Constructor
-    Move(int from_=0, int to_=0, MoveFlag flag_=QUIET, Piece piece_=NO_PIECE, int captured_=-1) 
-        : from(from_), to(to_), flag(flag_), piece(piece_), captured(captured_){}
+    Move(int from_=0, int to_=0, MoveFlag flag_=QUIET, Piece piece_=NO_PIECE, Piece captured_=NO_PIECE, int prevEnPassantSquare_ = NO_SQUARE, int prevCastlingRights_ = 0)
+        : from(from_), to(to_), flag(flag_), piece(piece_), captured(captured_), prevEnPassantSquare(prevEnPassantSquare_), prevCastlingRights(prevCastlingRights_){}
     // Convert move into string format
     std::string toString() const {
        char fromFile = 'a' + (from % 8);
@@ -59,7 +60,7 @@ class Board{
 public:
 
     // Bitboards
-    Bitboard pieces[12]; // bitboards for all 12 pieces 
+    Bitboard pieces[13]; // bitboards for all 12 pieces + empty piece
     Bitboard occupancy[3]; // Occupancy bitboards for WHITE, BLACK, BOTH
 
     // Game state
@@ -85,7 +86,7 @@ public:
 
     // Moves
     bool makeMove(const Move& move); // make move `move`
-    bool unmakeMove(const Move& move);
+    bool unmakeMove(const Move& move); //unmake move `move`
     // Game state
     bool isSquareAttacked(int square, int bySide) const; // check if given square is attacked by given side
     bool isKingInCheck(int side) const; // check if king is in check for given side

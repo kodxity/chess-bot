@@ -7,7 +7,8 @@ class MoveGenerator {
 public:
     // Generates all legal moves for the current position
     static std::vector<Move> generateMoves(const Board& board);
-
+    static int currEnPassant;
+    static int currCastlingRights;
 private:
     
     // Generate moves for each piece

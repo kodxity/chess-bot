@@ -11,11 +11,13 @@ inline bool sameRank(int a, int b){
     return a / 8 == b / 8;
 }
 
+int MoveGenerator::currEnPassant = NO_SQUARE;       // initial value
+int MoveGenerator::currCastlingRights = 0;         // initial value
 
 // --- Main move generation entry ---
 std::vector<Move> MoveGenerator::generateMoves(const Board& board){
     std::vector<Move> moves; // all moves physically possible (no king checks)
-
+    
     // generate all moves and store them in `moves`
     generatePawnMoves(board, moves);
     generateKnightMoves(board, moves);
@@ -40,18 +42,19 @@ std::vector<Move> MoveGenerator::generateMoves(const Board& board){
 
 // --- PAWN MOVES ---
 void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& moves){
+    currEnPassant = board.enPassantSquare;
+    currCastlingRights = board.castlingRights;
     Turn side = board.turn;
     // bitboard of all pawns (board.pieces[P] = bitboard, so we do bitboard.board to get the bitboard value) 
     uint64_t pawns = board.pieces[side == WHITE ? P : p].board;  
 
     // Pawn move offsets (depend on color) = {white offset, black offset}
-    const int pawnPush[2] = {8, -8}; // go up 1 square: white moves +8, black -8
-    const int pawnDoublePush[2] = {16, -16}; // go up 2 squares 
 
     int direction = (side == WHITE) ? 8 : -8; // sq + direction = next square that pawn moves to
     int startRank = (side == WHITE) ? 1 : 6; // start rank of pawn (0 indexed)
     int promotionRank = (side == WHITE) ? 6 : 1; // rank before promotion
 
+    
     // go though all pawns
     while(pawns){ // after going through all pawns, pawns bitboard = 0
         int from = __builtin_ctzll(pawns); // get index of least significant bit (pawn square)
@@ -64,20 +67,20 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
             // Promotion
             if(from / 8 == promotionRank){ // if its at rank before promotion
                 // Add four promotion options
-                moves.emplace_back(from, to, PROMOTION_QUEEN, P);
-                moves.emplace_back(from, to, PROMOTION_ROOK, P);
-                moves.emplace_back(from, to, PROMOTION_BISHOP, P);
-                moves.emplace_back(from, to, PROMOTION_KNIGHT, P);
+                moves.emplace_back(from, to, PROMOTION_QUEEN, (side == WHITE ? P : p), NO_PIECE, currEnPassant, currCastlingRights);
+                moves.emplace_back(from, to, PROMOTION_ROOK, (side == WHITE ? P : p), NO_PIECE, currEnPassant, currCastlingRights);
+                moves.emplace_back(from, to, PROMOTION_BISHOP, (side == WHITE ? P : p), NO_PIECE, currEnPassant, currCastlingRights);
+                moves.emplace_back(from, to, PROMOTION_KNIGHT, (side == WHITE ? P : p), NO_PIECE, currEnPassant, currCastlingRights);
             }
             else{ // doesn't promote
-                moves.emplace_back(from, to, QUIET, (side == WHITE ? P : p));
+                moves.emplace_back(from, to, QUIET, (side == WHITE ? P : p), NO_PIECE, currEnPassant, currCastlingRights);
             }
 
             // Double push
             if(from / 8 == startRank){ // its at starting rank, double pushed allowed
                 int doubleTo = from + 2 * direction; // square after double pushing
                 if(!(board.occupancy[BOTH].board & (1ULL << doubleTo))){ // front two squares not occupied 
-                    moves.emplace_back(from, doubleTo, DOUBLE_PAWN_PUSH, (side == WHITE ? P : p));
+                    moves.emplace_back(from, doubleTo, DOUBLE_PAWN_PUSH, (side == WHITE ? P : p), NO_PIECE, currEnPassant, currCastlingRights);
                 }
             }
         }
@@ -91,7 +94,18 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
 
             if(toCap < 0 || toCap >= 64 || abs(toFile - fromFile) > 1) continue; // capture is invalid (goes out of board)
             if(board.occupancy[!side].board & (1ULL << toCap)){ // there exists piece for capture
-                moves.emplace_back(from, toCap, CAPTURE, (side == WHITE ? P : p));
+                
+                // Capture + promotion
+                if(from / 8 == promotionRank){ // if its at rank before promotion
+                    // Add four promotion options
+                    moves.emplace_back(from, toCap, PROMOTION_QUEEN, (side == WHITE ? P : p), board.getPiece(toCap), currEnPassant, currCastlingRights);
+                    moves.emplace_back(from, toCap, PROMOTION_ROOK, (side == WHITE ? P : p), board.getPiece(toCap), currEnPassant, currCastlingRights);
+                    moves.emplace_back(from, toCap, PROMOTION_BISHOP, (side == WHITE ? P : p), board.getPiece(toCap), currEnPassant, currCastlingRights);
+                    moves.emplace_back(from, toCap, PROMOTION_KNIGHT, (side == WHITE ? P : p), board.getPiece(toCap), currEnPassant, currCastlingRights);
+                }
+                else{
+                    moves.emplace_back(from, toCap, CAPTURE, (side == WHITE ? P : p), board.getPiece(toCap), currEnPassant, currCastlingRights);
+                }
             }
         }
 
@@ -106,7 +120,7 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
             int toFile = epTarget % 8;
             if(epTarget < 0 || epTarget >= 64 || abs(toFile - fromFile) > 1) continue;
             if(epTarget == leftCap || epTarget == rightCap){ // enPassant exists at square
-                moves.emplace_back(from, epTarget, EN_PASSANT, P);
+                moves.emplace_back(from, epTarget, EN_PASSANT, (side == WHITE ? P : p), (side == WHITE ? p : P), currEnPassant, currCastlingRights); 
             }
         }
 
@@ -116,6 +130,8 @@ void MoveGenerator::generatePawnMoves(const Board& board, std::vector<Move>& mov
 
 // --- KNIGHT MOVES ---
 void MoveGenerator::generateKnightMoves(const Board& board, std::vector<Move>& moves) {
+    currEnPassant = board.enPassantSquare;
+    currCastlingRights = board.castlingRights;
     Turn side = board.turn;
     uint64_t knights = board.pieces[side == WHITE ? N : n].board;
     
@@ -143,9 +159,9 @@ void MoveGenerator::generateKnightMoves(const Board& board, std::vector<Move>& m
 
             // Capture or quiet
             if(board.occupancy[!side].board & (1ULL << to))
-                moves.emplace_back(from, to, CAPTURE, (side == WHITE ? N : n));
+                moves.emplace_back(from, to, CAPTURE, (side == WHITE ? N : n), board.getPiece(to), currEnPassant, currCastlingRights);
             else
-                moves.emplace_back(from, to, QUIET, (side == WHITE ? N : n));
+                moves.emplace_back(from, to, QUIET, (side == WHITE ? N : n), NO_PIECE, currEnPassant, currCastlingRights);
         }
     }
 }
@@ -154,6 +170,8 @@ void MoveGenerator::generateKnightMoves(const Board& board, std::vector<Move>& m
 
 // --- BISHOP MOVES ---
 void MoveGenerator::generateBishopMoves(const Board& board, std::vector<Move>& moves){
+    currEnPassant = board.enPassantSquare;
+    currCastlingRights = board.castlingRights;
     int directions[4] = {9, 7, -9, -7};
     Turn side = board.turn;
     uint64_t bishops = board.pieces[side == WHITE ? B : b].board;
@@ -186,11 +204,11 @@ void MoveGenerator::generateBishopMoves(const Board& board, std::vector<Move>& m
                     break; 
 
                 if(board.occupancy[!side].board & (1ULL << next)){ // can capture piece
-                    moves.emplace_back(from, next, CAPTURE, (side == WHITE ? B : b));
+                    moves.emplace_back(from, next, CAPTURE, (side == WHITE ? B : b), board.getPiece(next), currEnPassant, currCastlingRights);
                     break; // stop after capture
                 }
 
-                moves.emplace_back(from, next, QUIET, (side == WHITE ? B : b)); // add move
+                moves.emplace_back(from, next, QUIET, (side == WHITE ? B : b), NO_PIECE, currEnPassant, currCastlingRights); // add move
                 to = next; // go to next move
             }
         }
@@ -200,6 +218,8 @@ void MoveGenerator::generateBishopMoves(const Board& board, std::vector<Move>& m
 
 // --- ROOK MOVES ---
 void MoveGenerator::generateRookMoves(const Board& board, std::vector<Move>& moves){
+    currEnPassant = board.enPassantSquare;
+    currCastlingRights = board.castlingRights;
     int directions[4] = {8, -8, 1, -1}; // only horizontal
     int side = board.turn;
     uint64_t rooks = board.pieces[side == WHITE ? R : r].board;
@@ -230,11 +250,11 @@ void MoveGenerator::generateRookMoves(const Board& board, std::vector<Move>& mov
                     break;
 
                 if(board.occupancy[!side].board & (1ULL << next)) { // can capture piece
-                    moves.emplace_back(from, next, CAPTURE, (side == WHITE ? R : r));
+                    moves.emplace_back(from, next, CAPTURE, (side == WHITE ? R : r), board.getPiece(next), board.enPassantSquare, currCastlingRights);
                     break;
                 }
 
-                moves.emplace_back(from, next, QUIET, (side == WHITE ? R : r)); // add move
+                moves.emplace_back(from, next, QUIET, (side == WHITE ? R : r), NO_PIECE, currEnPassant, currCastlingRights); // add move
                 to = next; // go to next move
             }
         }
@@ -246,6 +266,8 @@ void MoveGenerator::generateRookMoves(const Board& board, std::vector<Move>& mov
 
 // --- QUEEN MOVES ---
 void MoveGenerator::generateQueenMoves(const Board& board, std::vector<Move>& moves){
+    currEnPassant = board.enPassantSquare;
+    currCastlingRights = board.castlingRights;
     int directions[8] = {8, -8, 1, -1, 9, 7, -9, -7}; // all 8 directions
     int side = board.turn;
     uint64_t queens = board.pieces[side == WHITE ? Q : q].board;
@@ -276,11 +298,11 @@ void MoveGenerator::generateQueenMoves(const Board& board, std::vector<Move>& mo
                     break;
 
                 if(board.occupancy[!side].board & (1ULL << next)){ // capture opposite piece
-                    moves.emplace_back(from, next, CAPTURE, (side == WHITE ? Q : q));
+                    moves.emplace_back(from, next, CAPTURE, (side == WHITE ? Q : q), board.getPiece(next), currEnPassant, currCastlingRights);
                     break; 
                 }
 
-                moves.emplace_back(from, next, QUIET, (side == WHITE ? Q : q)); // move to square
+                moves.emplace_back(from, next, QUIET, (side == WHITE ? Q : q), NO_PIECE, currEnPassant, currCastlingRights); // move to square
                 to = next; // next square in that direction
             }
         }
@@ -290,6 +312,8 @@ void MoveGenerator::generateQueenMoves(const Board& board, std::vector<Move>& mo
 
 // --- KING MOVES ---
 void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& moves){
+    currEnPassant = board.enPassantSquare;
+    currCastlingRights = board.castlingRights;
     int side = board.turn;
     uint64_t king = board.pieces[side == WHITE ? K : k].board;
 
@@ -312,9 +336,9 @@ void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& mov
         if (board.occupancy[side].board & (1ULL << to)) continue; // can't land on own piece
 
         if (board.occupancy[!side].board & (1ULL << to)) // can capture piece
-            moves.emplace_back(from, to, CAPTURE, (side == WHITE ? K : k));
+            moves.emplace_back(from, to, CAPTURE, (side == WHITE ? K : k), board.getPiece(to), currEnPassant, currCastlingRights);
         else // moves there, no piece to capture
-            moves.emplace_back(from, to, QUIET, (side == WHITE ? K : k));
+            moves.emplace_back(from, to, QUIET, (side == WHITE ? K : k), NO_PIECE, currEnPassant, currCastlingRights);
     }
 
 
@@ -322,13 +346,13 @@ void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& mov
     // --- CASTLING ---
     uint64_t all = board.occupancy[BOTH].board;
 
-    if(side == WHITE){
+    if(side == WHITE && !board.isKingInCheck(WHITE)){ // king can't castle in check
         // Kingside (K)
         if(board.castlingRights & 1){
             if(!(all & ((1ULL << F1) | (1ULL << G1))) &&
                 (!board.isSquareAttacked(F1, !side) 
               && !board.isSquareAttacked(G1, !side))){ // castling path is empty and not attacked
-                moves.emplace_back(E1, G1, KING_CASTLE, K);
+                moves.emplace_back(E1, G1, KING_CASTLE, K, NO_PIECE, currEnPassant, currCastlingRights);
             }
         }
         // Queenside (Q)
@@ -336,17 +360,17 @@ void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& mov
             if(!(all & ((1ULL << D1) | (1ULL << C1) | (1ULL << B1))) &&
                 (!board.isSquareAttacked(D1, !side) 
               && !board.isSquareAttacked(C1, !side))){ // castling path is empty and not attacked
-                moves.emplace_back(E1, C1, QUEEN_CASTLE, K);
+                moves.emplace_back(E1, C1, QUEEN_CASTLE, K, NO_PIECE, currEnPassant, currCastlingRights);
             }
         }
     } 
-    else{
+    else if(!board.isKingInCheck(BLACK)){ // king can't castle in check
         // Kingside (k)
         if(board.castlingRights & 4){
             if(!(all & ((1ULL << F8) | (1ULL << G8)))&&
                 (!board.isSquareAttacked(F8, !side) 
               && !board.isSquareAttacked(G8, !side))){ // castling path is empty and not attacked
-                moves.emplace_back(E8, G8, KING_CASTLE, k);
+                moves.emplace_back(E8, G8, KING_CASTLE, k, NO_PIECE, currEnPassant, currCastlingRights);
             }
         }
         // Queenside (q)
@@ -354,7 +378,7 @@ void MoveGenerator::generateKingMoves(const Board& board, std::vector<Move>& mov
             if(!(all & ((1ULL << D8) | (1ULL << C8) | (1ULL << B8)))&&
                 (!board.isSquareAttacked(D8, !side) 
               && !board.isSquareAttacked(C8, !side))){ // castling path is empty and not attacked
-                moves.emplace_back(E8, C8, QUEEN_CASTLE, k);
+                moves.emplace_back(E8, C8, QUEEN_CASTLE, k, NO_PIECE, currEnPassant, currCastlingRights);
             }
         }
     }
