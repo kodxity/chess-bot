@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <cstdint>
-#include "movegen.hpp"
-#include "board.hpp"
+#include "../game/movegen.hpp"
+#include "../game/board.hpp"
 
 // Result container for the search output
 struct SearchResult {

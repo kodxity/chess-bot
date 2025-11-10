@@ -1,7 +1,7 @@
 #include "search.hpp"
 #include "eval.hpp"   // your eval function header
-#include "movegen.hpp"      // your move generator
-#include "board.hpp"      // your move generator
+#include "../game/movegen.hpp"      // your move generator
+#include "../game/board.hpp"      // your move generator
 #include <algorithm>
 #include <limits>
 

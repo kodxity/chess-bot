@@ -6,7 +6,7 @@ const int bishopValue = 3;
 const int rookValue = 5;
 const int queenValue = 9;
 
-int pieceSumEval(Board board){
+int pieceSumEval(Board &board){
     int evaluation = 0;
 	evaluation += board.pieces['P'].countBits() * pawnValue;
 	evaluation += board.pieces['K'].countBits() * pawnValue;

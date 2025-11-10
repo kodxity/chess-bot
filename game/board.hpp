@@ -46,13 +46,21 @@ struct Move {
     // Constructor
     Move(int from_=0, int to_=0, MoveFlag flag_=QUIET, Piece piece_=NO_PIECE, Piece captured_=NO_PIECE, int prevEnPassantSquare_ = NO_SQUARE, int prevCastlingRights_ = 0)
         : from(from_), to(to_), flag(flag_), piece(piece_), captured(captured_), prevEnPassantSquare(prevEnPassantSquare_), prevCastlingRights(prevCastlingRights_){}
-    // Convert move into string format
+    
+    // Convert move into UCI string format
     std::string toString() const {
-       char fromFile = 'a' + (from % 8);
+        char fromFile = 'a' + (from % 8);
         char fromRank = '1' + (from / 8);
         char toFile = 'a' + (to % 8);
         char toRank = '1' + (to / 8);
-        return std::string() + fromFile + fromRank + toFile + toRank;
+        std::string ans = std::string() + fromFile + fromRank + toFile + toRank;
+        switch(flag){
+            case PROMOTION_QUEEN: ans += 'q'; break;
+            case PROMOTION_ROOK: ans += 'r'; break;
+            case PROMOTION_BISHOP: ans += 'b'; break;
+            case PROMOTION_KNIGHT: ans += 'n'; break;
+        }
+        return ans;
     }
 };  
 
