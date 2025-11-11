@@ -17,36 +17,35 @@ Search::Search(int maxDepth) : maxDepth(maxDepth) {}
 // -----------------------------------------
 SearchResult Search::findBestMove(Board& board) {
     SearchResult result;
-    result.score = std::numeric_limits<int>::min();
+    result.score = -1e9;
     result.bestMove = Move(); // default no-move
 
-    int alpha = std::numeric_limits<int>::min() + 1;
-    int beta  = std::numeric_limits<int>::max() - 1;
+    int alpha = -1e9;
+    int beta  = 1e9;
 
     // Get legal moves from root
     std::vector<Move> moves = MoveGenerator::generateMoves(board);
-    if (moves.empty()) {
-        // no legal moves = checkmate or stalemate
-        result.score = pieceSumEval(board);
-        return result;
+    if (moves.empty()) { // checkmate or stalemate
+        if (board.isKingInCheck(board.turn)){
+            result.score = -1e9;
+        }
+        else{
+            result.score = 0;
+        }
     }
 
-    int bestScore = std::numeric_limits<int>::min();
+    int bestScore = -1e9;
     Move bestMove;
 
     // Simple depth search loop (no iterative deepening for now)
     for (const Move& mv : moves) {
         board.makeMove(mv);
-        int score = -negamax(board, maxDepth - 1,  0, -beta, -alpha);
+        int score = -negamax(board, maxDepth - 1,  1, -beta, -alpha);
         board.unmakeMove(mv);
-        // std::cout<<mv.toString()<<" "<<score<<"\n";
+        std::cout<<mv.toString()<<" "<<score<<"\n";
         if (score > bestScore) {
             bestScore = score;
             bestMove = mv;
-        }
-
-        if (score > alpha) {
-            alpha = score;
         }
     }
 
@@ -62,16 +61,24 @@ SearchResult Search::findBestMove(Board& board) {
 
 int Search::quiescence(Board& board, int alpha = -1e9, int beta = 1e9) {
 	int standPat = pieceSumEval(board); // eval returns a white-relative score
-
+    std::vector<Move> moves = MoveGenerator::generateMoves(board);
+    if (moves.empty()) { // checkmate or stalemate
+        if (board.isKingInCheck(board.turn)){
+            return -1e9;
+        }
+        else{
+            return 0;
+        }
+    }
 	if (standPat >= beta) {
 		return standPat; // Opponent won't let this happen
 	}
 	if (standPat > alpha) {
 		alpha = standPat; // Update alpha if we found a better score
 	}
-    std::vector<Move> moves = MoveGenerator::generateMoves(board);
+    
 	for (Move m : moves) {
-		if (m.flag == CAPTURE) {
+		if (m.flag != QUIET) {
 			board.makeMove(m);
 			int score = -quiescence(board, -beta, -alpha);
 			board.unmakeMove(m);
@@ -109,16 +116,15 @@ int Search::negamax(Board& board, int depth, int ply, int alpha, int beta) {
 
     for (const Move& mv : moves) {
         board.makeMove(mv);
-        int value;
-        if(depth-1==0 && mv.flag != QUIET){ // deepening for important moves
-            value = -quiescence(board, -beta, -alpha);
+        int value = -negamax(board, depth - 1, ply+1, -beta, -alpha);
+        /*
+        if(depth==1 && mv.toString() == "c4f7"){
+            std::cout<<1<<" "<<mv.toString()<<" "<<value<<" "<<board.isKingInCheck(board.turn)<<"\n";
+            board.printBoard();
         }
-        else{
-            value = -negamax(board, depth - 1, ply+1, -beta, -alpha);
-        }
-
+        */
         board.unmakeMove(mv);
-
+        
         if (value > bestValue) {
             bestValue = value;
             if (value > alpha) {
@@ -127,7 +133,7 @@ int Search::negamax(Board& board, int depth, int ply, int alpha, int beta) {
         }
 
         if (value >= beta) {
-            if (mv.flag != CAPTURE) {
+            if (mv.flag == QUIET) {
                 // QUIET move caused cutoff: record killer + history
                 addKiller(mv, ply);
                 updateHistory(mv, ply);

@@ -187,8 +187,7 @@ int main() {
                     std::cout << "Stalemate!\n";
                 break;
             }
-            for (auto& m : legalMoves)
-                std::cout << m.toString() << "\n";
+   
             bool found = false;
             for (auto& move : legalMoves) {
                 if (move.from == from && move.to == to) {
@@ -214,7 +213,7 @@ int main() {
                 break;
             }
 
-            Search search(6);
+            Search search(2);
             SearchResult best = search.findBestMove(board);
             Move bestMove = best.bestMove; // random move for now
             board.makeMove(bestMove);

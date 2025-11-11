@@ -1,5 +1,5 @@
 #include "../game/board.hpp"
-
+#include "../game/movegen.hpp"
 const int pawnValue = 1;
 const int knightValue = 3;
 const int bishopValue = 3;
@@ -18,6 +18,18 @@ int pieceSumEval(Board &board){
     evaluation -= board.pieces[b].countBits() * bishopValue;
     evaluation -= board.pieces[r].countBits() * rookValue;
     evaluation -= board.pieces[q].countBits() * queenValue;
+    /*
+    std::vector<Move> moves = MoveGenerator::generateMoves(board);
+    if (moves.empty()) { // checkmate or stalemate
+        if (board.isKingInCheck(board.turn)){
+            evaluation = -1e9;
+        }
+        else{
+            evaluation = 0;
+        }
+    }
+    */
 	return (evaluation * (board.turn == WHITE ? 1 : -1));
+
 }
 
