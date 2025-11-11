@@ -8,6 +8,7 @@
 #include "game/movegen.hpp"
 #include "engine/search.hpp"
 
+
 static Board board;
 std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -128,6 +129,7 @@ int main() {
             Search search(depth);
             SearchResult best = search.findBestMove(board);
             Move bestMove = best.bestMove;
+            board.makeMove(bestMove);
             std::cout << "bestmove " << bestMove.toString() << "\n" << std::flush;
         }
         else if (line == "quit") {
@@ -137,3 +139,91 @@ int main() {
 
     return 0;
 }
+
+
+
+
+
+/*
+int main() {
+    // ==================== CHESS GAME ====================
+    
+    
+    Board board;
+    // Standard starting FEN
+    std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    // Load the FEN into the board
+    board.loadFEN(startFEN);
+    std::cout << "Welcome to your chess engine!\n";
+    board.printBoard();
+
+    while (true) {
+        if (board.turn == WHITE) {
+            // Player move
+            std::string input;
+            std::cout << "Enter your move: ";
+            std::cin >> input;
+            if (input == "quit") break;
+
+            // Parse move
+            if (input.size() != 4) {
+                std::cout << "Invalid input format.\n";
+                continue;
+            }
+
+            int fromFile = input[0] - 'a';
+            int fromRank = input[1] - '1';
+            int toFile   = input[2] - 'a';
+            int toRank   = input[3] - '1';
+
+            int from = fromRank * 8 + fromFile;
+            int to   = toRank * 8 + toFile;
+
+            std::vector<Move> legalMoves = MoveGenerator::generateMoves(board);
+            if (legalMoves.empty()) {
+                if (board.isKingInCheck(board.turn))
+                    std::cout << "Checkmate! You Lose!\n";
+                else
+                    std::cout << "Stalemate!\n";
+                break;
+            }
+            for (auto& m : legalMoves)
+                std::cout << m.toString() << "\n";
+            bool found = false;
+            for (auto& move : legalMoves) {
+                if (move.from == from && move.to == to) {
+                    board.makeMove(move);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                std::cout << "Illegal move!\n";
+                continue;
+            }
+        } 
+        else {
+            // Engine move
+            std::vector<Move> legalMoves = MoveGenerator::generateMoves(board);
+            if (legalMoves.empty()) {
+                if (board.isKingInCheck(board.turn))
+                    std::cout << "Checkmate! You win!\n";
+                else
+                    std::cout << "Stalemate!\n";
+                break;
+            }
+
+            Search search(6);
+            SearchResult best = search.findBestMove(board);
+            Move bestMove = best.bestMove; // random move for now
+            board.makeMove(bestMove);
+            std::cout << "Engine plays: " << bestMove.toString() << "\n";
+        }
+
+        board.printBoard();
+    }
+
+    std::cout << "Game over.\n";
+}
+*/

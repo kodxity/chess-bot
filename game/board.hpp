@@ -43,10 +43,18 @@ struct Move {
     Piece captured;       // what was captured (-1 if none)
     int prevEnPassantSquare; // store previous en passant square
     int prevCastlingRights;
+    int score = 0;
     // Constructor
     Move(int from_=0, int to_=0, MoveFlag flag_=QUIET, Piece piece_=NO_PIECE, Piece captured_=NO_PIECE, int prevEnPassantSquare_ = NO_SQUARE, int prevCastlingRights_ = 0)
         : from(from_), to(to_), flag(flag_), piece(piece_), captured(captured_), prevEnPassantSquare(prevEnPassantSquare_), prevCastlingRights(prevCastlingRights_){}
     
+    bool operator==(const Move& other) const {
+        return from == other.from &&
+            to == other.to &&
+            flag == other.flag &&
+            piece == other.piece &&
+            captured == other.captured;
+    }
     // Convert move into UCI string format
     std::string toString() const {
         char fromFile = 'a' + (from % 8);

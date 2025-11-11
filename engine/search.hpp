@@ -23,8 +23,8 @@ private:
     int maxDepth;
 
     // Negamax search with alpha-beta pruning
-    int negamax(Board& board, int depth, int alpha, int beta);
-    
+    int negamax(Board& board, int depth, int ply = 0, int alpha = 1e9, int beta = -1e9);
+    int quiescence(Board& board, int alpha, int beta);
 };
 
 #endif // SEARCH_HPP

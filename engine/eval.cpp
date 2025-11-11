@@ -8,16 +8,16 @@ const int queenValue = 9;
 
 int pieceSumEval(Board &board){
     int evaluation = 0;
-	evaluation += board.pieces['P'].countBits() * pawnValue;
-	evaluation += board.pieces['K'].countBits() * pawnValue;
-    evaluation += board.pieces['B'].countBits() * pawnValue;
-    evaluation += board.pieces['R'].countBits() * pawnValue;
-    evaluation += board.pieces['Q'].countBits() * pawnValue;
-    evaluation -= board.pieces['p'].countBits() * pawnValue;
-	evaluation -= board.pieces['k'].countBits() * pawnValue;
-    evaluation -= board.pieces['b'].countBits() * pawnValue;
-    evaluation -= board.pieces['r'].countBits() * pawnValue;
-    evaluation -= board.pieces['q'].countBits() * pawnValue;
-	return evaluation;
+	evaluation += board.pieces[P].countBits() * pawnValue;
+	evaluation += board.pieces[K].countBits() * knightValue;
+    evaluation += board.pieces[B].countBits() * bishopValue;
+    evaluation += board.pieces[R].countBits() * rookValue;
+    evaluation += board.pieces[Q].countBits() * queenValue;
+    evaluation -= board.pieces[p].countBits() * pawnValue;
+	evaluation -= board.pieces[k].countBits() * knightValue;
+    evaluation -= board.pieces[b].countBits() * bishopValue;
+    evaluation -= board.pieces[r].countBits() * rookValue;
+    evaluation -= board.pieces[q].countBits() * queenValue;
+	return (evaluation * (board.turn == WHITE ? 1 : -1));
 }
 
