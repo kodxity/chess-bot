@@ -9,12 +9,12 @@ const int queenValue = 9;
 int pieceSumEval(Board &board){
     int evaluation = 0;
 	evaluation += board.pieces[P].countBits() * pawnValue;
-	evaluation += board.pieces[K].countBits() * knightValue;
+	evaluation += board.pieces[N].countBits() * knightValue;
     evaluation += board.pieces[B].countBits() * bishopValue;
     evaluation += board.pieces[R].countBits() * rookValue;
     evaluation += board.pieces[Q].countBits() * queenValue;
     evaluation -= board.pieces[p].countBits() * pawnValue;
-	evaluation -= board.pieces[k].countBits() * knightValue;
+	evaluation -= board.pieces[n].countBits() * knightValue;
     evaluation -= board.pieces[b].countBits() * bishopValue;
     evaluation -= board.pieces[r].countBits() * rookValue;
     evaluation -= board.pieces[q].countBits() * queenValue;

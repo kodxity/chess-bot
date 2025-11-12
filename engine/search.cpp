@@ -118,8 +118,8 @@ int Search::negamax(Board& board, int depth, int ply, int alpha, int beta) {
         board.makeMove(mv);
         int value = -negamax(board, depth - 1, ply+1, -beta, -alpha);
         /*
-        if(depth==1 && mv.toString() == "c4f7"){
-            std::cout<<1<<" "<<mv.toString()<<" "<<value<<" "<<board.isKingInCheck(board.turn)<<"\n";
+        if(depth==1 && mv.toString() == "d3e4"){
+            std::cout<<1<<" "<<mv.toString()<<" "<<value<<" "<<pieceSumEval(board)<<" "<<board.pieces[P].countBits()<<" "<<board.pieces[p].countBits()<<" "<<board.pieces[n].countBits()<<" "<<board.pieces[N].countBits()<<board.pieces[b].countBits()<<" "<<board.pieces[B].countBits()<<" "<<board.pieces[r].countBits()<<" "<<board.pieces[R].countBits()<<"\n";
             board.printBoard();
         }
         */
