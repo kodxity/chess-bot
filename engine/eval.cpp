@@ -1,10 +1,12 @@
 #include "../game/board.hpp"
 #include "../game/movegen.hpp"
+#include "eval.hpp"
 const int pawnValue = 1;
 const int knightValue = 3;
 const int bishopValue = 3;
 const int rookValue = 5;
 const int queenValue = 9;
+
 
 int pieceSumEval(Board &board){
     int evaluation = 0;
@@ -33,3 +35,30 @@ int pieceSumEval(Board &board){
 
 }
 
+#include "nnue.hpp"
+#include <iostream>
+#include <vector>
+
+// ============================================================
+// Global NNUE network instance
+// ============================================================
+
+
+// Call this once during engine init
+
+
+// ============================================================
+// Example: convert a board to NNUE accumulators
+// ============================================================
+
+
+// ============================================================
+// Evaluate NNUE
+// ============================================================
+
+int32_t evaluate_board(const Board& b) {
+    if (b.turn == WHITE)
+        return evaluate(g_net, b.us, b.them);
+    else
+        return -evaluate(g_net, b.us, b.them);
+}

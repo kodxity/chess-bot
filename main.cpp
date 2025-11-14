@@ -7,7 +7,8 @@
 #include "game/board.hpp"
 #include "game/movegen.hpp"
 #include "engine/search.hpp"
-
+#include "engine/eval.hpp"
+#include "engine/nnue.hpp"
 
 static Board board;
 std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -50,10 +51,13 @@ void applyMoves(Board& board, const std::string& movesPart) {
         }
     }
 }
-
+/*
 int main() {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
+
+ 
+    nnue.loadWeights("nnue_weights1.txt");
 
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -119,7 +123,7 @@ int main() {
             }
         }
         else if (line.rfind("go", 0) == 0) {
-            int depth = 5;
+            int depth = 3;
             std::istringstream iss(line);
             std::string tok;
             while (iss >> tok) {
@@ -139,16 +143,29 @@ int main() {
 
     return 0;
 }
+*/
 
 
 
 
 
-/*
 int main() {
     // ==================== CHESS GAME ====================
+    init_eval();
+    std::cout << "Loaded NNUE weights (" << gNetworkBinSize << " bytes)\n";
     
-    
+    /*
+    nnue.loadWeights("C:/Users/kodxity/Documents/Programming Projects/Chess-Bot/engine/nn_weights1.txt");
+    std::ifstream fin("C:/Users/kodxity/Documents/Programming Projects/Chess-Bot/engine/nn_weights1.txt");
+    if (!fin) {
+        std::cout << "Failed to open weights file!\n";
+    } else {
+        std::string line;
+        int count = 0;
+        while (std::getline(fin, line)) count++;
+        std::cout << "Lines in weight file: " << count << "\n";
+    }
+    */
     Board board;
     // Standard starting FEN
     std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -213,7 +230,7 @@ int main() {
                 break;
             }
 
-            Search search(2);
+            Search search(5);
             SearchResult best = search.findBestMove(board);
             Move bestMove = best.bestMove; // random move for now
             board.makeMove(bestMove);
@@ -225,4 +242,3 @@ int main() {
 
     std::cout << "Game over.\n";
 }
-*/

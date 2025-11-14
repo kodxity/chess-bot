@@ -29,6 +29,9 @@ void Bitboard::flipBit(int pos){
     board ^= (1ULL << pos);
 }
 
+
+
+
 // Functions
 
 // get bit[pos]

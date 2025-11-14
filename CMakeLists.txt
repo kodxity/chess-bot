@@ -14,6 +14,7 @@ set(SOURCES
     main.cpp
     engine/search.cpp
     engine/eval.cpp
+    engine/nnue.cpp
     game/bitboard.cpp
     game/board.cpp
     game/movegen.cpp  
@@ -23,3 +24,4 @@ set(SOURCES
 # Create executable target
 add_executable(Chess-Bot ${SOURCES})
 
+configure_file(${CMAKE_SOURCE_DIR}/engine/quantised.bin ${CMAKE_BINARY_DIR}/quantised.bin COPYONLY)

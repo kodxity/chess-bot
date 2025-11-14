@@ -36,7 +36,7 @@ SearchResult Search::findBestMove(Board& board) {
 
     int bestScore = -1e9;
     Move bestMove;
-
+    
     // Simple depth search loop (no iterative deepening for now)
     for (const Move& mv : moves) {
         board.makeMove(mv);
@@ -60,7 +60,7 @@ SearchResult Search::findBestMove(Board& board) {
 // -----------------------------------------
 
 int Search::quiescence(Board& board, int alpha = -1e9, int beta = 1e9) {
-	int standPat = pieceSumEval(board); // eval returns a white-relative score
+	
     std::vector<Move> moves = MoveGenerator::generateMoves(board);
     if (moves.empty()) { // checkmate or stalemate
         if (board.isKingInCheck(board.turn)){
@@ -70,6 +70,7 @@ int Search::quiescence(Board& board, int alpha = -1e9, int beta = 1e9) {
             return 0;
         }
     }
+    int32_t standPat = evaluate_board(board); // eval returns a white-relative score
 	if (standPat >= beta) {
 		return standPat; // Opponent won't let this happen
 	}

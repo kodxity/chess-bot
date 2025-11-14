@@ -1,7 +1,10 @@
 #include "board.hpp"
+#include "../engine/nnue.hpp"
 #include <iostream>
 #include <sstream>
 #include <cctype>
+
+
 
 // Constructor 
 Board::Board(){
@@ -24,15 +27,42 @@ void Board::clear(){
     castlingRights = 0;
 }
 
+void build_accumulators(const Board& board, Accumulator& us, Accumulator& them) {
+    // Initialize from bias
+    init_accumulator(us, g_net);
+    init_accumulator(them, g_net);
+
+    // Example: each feature is (piece type, square)
+    // You’ll replace this with your own feature indexing scheme.
+    for(int i=0; i<63; i++){
+        Piece piece =board.getPiece(i);
+        if((board.occupancy[WHITE].board & (1ULL<<i))){ // piece is white
+            us.add_feature(g_net, piece * 64 + i);
+        }
+        else{ // piece is black
+            them.add_feature(g_net, piece * 64 + i);
+        }
+    }
+  
+}
+
 // Set and Remove Pieces
 void Board::setPiece(int square, Piece piece){
     if(square < A1 || square > H8) return; // ensure valid square
     pieces[piece].setBit(square);
+    if(piece != NO_PIECE){
+        us.add_feature(g_net, piece*64+square);
+        them.add_feature(g_net, piece*64+square);
+    }
 }
 
 void Board::removePiece(int square, Piece piece){
     if(square < A1 || square > H8) return; // ensure valid square
     pieces[piece].clearBit(square);
+    if(piece != NO_PIECE){
+        us.remove_feature(g_net, piece*64+square);
+        them.remove_feature(g_net, piece*64+square);
+    }
 }
 
 // Get Piece at Square 
@@ -188,7 +218,7 @@ bool Board::makeMove(const Move& move){
     int to = move.to;
     Piece piece = move.piece; // piece on current square
     int side = turn;
-
+    
     // --- Reset en passant ---
     enPassantSquare = NO_SQUARE;
 

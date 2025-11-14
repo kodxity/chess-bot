@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string> // can use string
 #include "bitboard.hpp"
-
+#include "../engine/nnue.hpp"
 
 // enums
 
@@ -30,7 +30,6 @@ enum MoveFlag{
     PROMOTION_BISHOP,
     PROMOTION_KNIGHT
 };
-
 
 
 
@@ -75,10 +74,16 @@ struct Move {
 class Board{
 public:
 
+   
+
+
     // Bitboards
     Bitboard pieces[13]; // bitboards for all 12 pieces + empty piece
     Bitboard occupancy[3]; // Occupancy bitboards for WHITE, BLACK, BOTH
+    
+    Accumulator us, them;
 
+    
     // Game state
     Turn turn; 
     int enPassantSquare;
@@ -98,7 +103,9 @@ public:
     // Utility
     void loadFEN(const std::string& fen); // FEN handling
     void printBoard() const; // print visual board to console
-
+    
+    // NNUE: Build from full board
+    void build_accumulators(const Board& board, Accumulator& white, Accumulator& black);
 
     // Moves
     bool makeMove(const Move& move); // make move `move`
