@@ -56,8 +56,7 @@ int main() {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
- 
-    nnue.loadWeights("nnue_weights1.txt");
+    init_eval();
 
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -123,7 +122,7 @@ int main() {
             }
         }
         else if (line.rfind("go", 0) == 0) {
-            int depth = 3;
+            int depth = 5;
             std::istringstream iss(line);
             std::string tok;
             while (iss >> tok) {
@@ -148,31 +147,22 @@ int main() {
 
 
 
-
 int main() {
     // ==================== CHESS GAME ====================
     init_eval();
-    std::cout << "Loaded NNUE weights (" << gNetworkBinSize << " bytes)\n";
+
     
-    /*
-    nnue.loadWeights("C:/Users/kodxity/Documents/Programming Projects/Chess-Bot/engine/nn_weights1.txt");
-    std::ifstream fin("C:/Users/kodxity/Documents/Programming Projects/Chess-Bot/engine/nn_weights1.txt");
-    if (!fin) {
-        std::cout << "Failed to open weights file!\n";
-    } else {
-        std::string line;
-        int count = 0;
-        while (std::getline(fin, line)) count++;
-        std::cout << "Lines in weight file: " << count << "\n";
-    }
-    */
+    
+    
     Board board;
     // Standard starting FEN
     std::string startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     // Load the FEN into the board
     board.loadFEN(startFEN);
+    board.build_accumulators(board, board.us, board.them);
     std::cout << "Welcome to your chess engine!\n";
     board.printBoard();
+    std::cout<<evaluate_board(board)<<"\n";
 
     while (true) {
         if (board.turn == WHITE) {

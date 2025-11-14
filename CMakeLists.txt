@@ -24,4 +24,4 @@ set(SOURCES
 # Create executable target
 add_executable(Chess-Bot ${SOURCES})
 
-configure_file(${CMAKE_SOURCE_DIR}/engine/quantised.bin ${CMAKE_BINARY_DIR}/quantised.bin COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/engine/beans.bin ${CMAKE_BINARY_DIR}/beans.bin COPYONLY)

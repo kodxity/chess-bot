@@ -27,32 +27,59 @@ void Board::clear(){
     castlingRights = 0;
 }
 
-void build_accumulators(const Board& board, Accumulator& us, Accumulator& them) {
-    // Initialize from bias
+int Board::calculate_index(int sq, int pt, bool side, bool perspective) {
+	if (perspective) {
+		side = 1-side;
+		sq = (sq ^ 56);
+	}
+	return side * 64 * 6 + pt * 64 + sq;
+}
+
+
+
+void Board::build_accumulators(const Board& board, Accumulator& us, Accumulator& them) {
     init_accumulator(us, g_net);
     init_accumulator(them, g_net);
 
-    // Example: each feature is (piece type, square)
-    // You’ll replace this with your own feature indexing scheme.
-    for(int i=0; i<63; i++){
-        Piece piece =board.getPiece(i);
-        if((board.occupancy[WHITE].board & (1ULL<<i))){ // piece is white
-            us.add_feature(g_net, piece * 64 + i);
+    for (int sq = 0; sq < 64; sq++) {
+
+        Piece p = board.getPiece(sq);
+        if (p == NO_PIECE) continue; 
+   
+        if (p < 6){  // white piece: P,N,B,R,Q,K = 0..5
+            us.add_feature(g_net, calculate_index(sq, p, 0, 0));
+            them.add_feature(g_net, calculate_index(sq, p, 0, 1));
+            std::cout<<p<<" s "<<calculate_index(sq, p, 0, 0)<<" "<<calculate_index(sq, p, 0, 1)<<"\n";
         }
-        else{ // piece is black
-            them.add_feature(g_net, piece * 64 + i);
+        else{         // black piece: p,n,b,r,q,k = 6..11
+            us.add_feature(g_net, calculate_index(sq, p-6, 1, 0));
+            them.add_feature(g_net, calculate_index(sq, p-6, 1, 1));
+            std::cout<<p-6<<" "<<calculate_index(sq, p-6, 1, 0)<<" "<<calculate_index(sq, p-6, 1, 1)<<"\n";
         }
     }
-  
+    for (int i = 0; i < 16; i++){
+        std::cout << "  [" << i << "] = " << us.vals[i] << "\n";
+    }
+    for (int i = 0; i < 16; i++){
+        std::cout << "  [" << i << "] = " << them.vals[i] << "\n";
+    }
 }
+
+
 
 // Set and Remove Pieces
 void Board::setPiece(int square, Piece piece){
     if(square < A1 || square > H8) return; // ensure valid square
     pieces[piece].setBit(square);
     if(piece != NO_PIECE){
-        us.add_feature(g_net, piece*64+square);
-        them.add_feature(g_net, piece*64+square);
+        if(piece < 6){
+            us.add_feature(g_net, calculate_index(square, p, 0, 0));
+            them.add_feature(g_net, calculate_index(square, p, 0, 1));
+        }
+        else{
+            us.add_feature(g_net, calculate_index(square, p-6, 0, 0));
+            them.add_feature(g_net, calculate_index(square, p-6, 0, 1));
+        }
     }
 }
 
@@ -60,8 +87,14 @@ void Board::removePiece(int square, Piece piece){
     if(square < A1 || square > H8) return; // ensure valid square
     pieces[piece].clearBit(square);
     if(piece != NO_PIECE){
-        us.remove_feature(g_net, piece*64+square);
-        them.remove_feature(g_net, piece*64+square);
+        if(piece < 6){
+            us.remove_feature(g_net, calculate_index(square, p, 0, 0));
+            them.remove_feature(g_net, calculate_index(square, p, 0, 1));
+        }
+        else{
+            us.remove_feature(g_net, calculate_index(square, p-6, 1, 0));
+            them.remove_feature(g_net, calculate_index(square, p-6, 1, 1));
+        }
     }
 }
 

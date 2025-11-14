@@ -83,7 +83,7 @@ public:
     
     Accumulator us, them;
 
-    
+
     // Game state
     Turn turn; 
     int enPassantSquare;
@@ -91,7 +91,7 @@ public:
 
     // Constructors
     Board();
-
+    
     // Functions
     void clear(); // clear board
     void setPiece(int square, Piece piece); // put piece on square 
@@ -103,7 +103,7 @@ public:
     // Utility
     void loadFEN(const std::string& fen); // FEN handling
     void printBoard() const; // print visual board to console
-    
+    int calculate_index(int sq, int pt, bool side, bool perspective);
     // NNUE: Build from full board
     void build_accumulators(const Board& board, Accumulator& white, Accumulator& black);
 

@@ -5,12 +5,12 @@
 // ============================================================
 // Constants
 // ============================================================
-constexpr int HIDDEN_SIZE = 128;
+constexpr int HIDDEN_SIZE = 64;
 constexpr int SCALE = 400;
 constexpr int16_t QA = 255;
 constexpr int16_t QB = 64;
 #ifndef NNUE_PATH
-#define NNUE_PATH "quantised.bin"
+#define NNUE_PATH "beans.bin"
 #endif
 // ============================================================
 // Forward declarations
@@ -29,7 +29,7 @@ extern const Network* g_net;     // declared only
 // ============================================================
 // Accumulator
 // ============================================================
-struct alignas(64) Accumulator {
+struct Accumulator {
     int16_t vals[HIDDEN_SIZE];
 
     void clear();
@@ -41,12 +41,15 @@ struct alignas(64) Accumulator {
 // ============================================================
 // Network layout (matches .bin format)
 // ============================================================
-struct alignas(64) Network {
+struct Network {
     // 768 × HIDDEN_SIZE
     int16_t feature_weights[768][HIDDEN_SIZE];
     int16_t feature_bias[HIDDEN_SIZE];
     int16_t output_weights[2 * HIDDEN_SIZE];
     int16_t output_bias;
+
+    void load();
+    
 };
 
 // ============================================================
@@ -54,7 +57,6 @@ struct alignas(64) Network {
 // ============================================================
 
 // Load the embedded binary weights into a Network
-const Network* loadNetwork();
 
 void init_eval();
 

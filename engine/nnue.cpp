@@ -1,29 +1,48 @@
 #include "nnue.hpp"
 #include <cmath>
 #include <iostream>
-
-extern "C" {
 #include "incbin.h"
+extern "C" {
+    INCBIN(networkWeights, NNUE_PATH);
+
 }
 
 // Embed the binary file
-INCBIN(NetworkBin, NNUE_PATH);
+
 
 
 const Network* g_net = nullptr;
+
+static Network* s_network_storage = nullptr;
+
 void init_eval() {
-    g_net = loadNetwork();
-    if (!g_net) {
-        std::cerr << "NNUE weights failed to load!\n";
-        std::abort();
-    }
-    std::cout << "NNUE loaded successfully.\n";
+
+
+    s_network_storage = new Network();
+    s_network_storage->load();
+
+    g_net = s_network_storage;
 }
+
+
+
 // ============================================================
 // Utility
 // ============================================================
+int16_t CReLU(int16_t value, int16_t min, int16_t max)
+{
+    if (value <= min)
+        return min;
+
+    if (value >= max)
+        return max;
+
+    return value;
+}
 inline int32_t screlu(int16_t x) {
-    return std::max<int32_t>(0, static_cast<int32_t>(x));
+    int32_t y = CReLU(x,0,QA);
+    // std::max<int32_t>(0, static_cast<int32_t>(x));
+    return y*y;
 }
 
 // ============================================================
@@ -36,15 +55,14 @@ void Accumulator::clear() {
 
 
 void Accumulator::add_feature(const Network* net, size_t feature_idx) {
-    const int16_t* src = net->feature_weights[feature_idx];
+    // std::cout<<"FEATURE: "<<feature_idx<<"\n";
     for (int i = 0; i < HIDDEN_SIZE; i++)
-        vals[i] += src[i];
+        vals[i] += net->feature_weights[feature_idx][i];
 }
 
 void Accumulator::remove_feature(const Network* net, size_t feature_idx) {
-    const int16_t* src = net->feature_weights[feature_idx];
     for (int i = 0; i < HIDDEN_SIZE; i++)
-        vals[i] -= src[i];
+        vals[i] -= net->feature_weights[feature_idx][i];
 }
 
 // ============================================================
@@ -52,14 +70,27 @@ void Accumulator::remove_feature(const Network* net, size_t feature_idx) {
 // ============================================================
 
 
-const Network* loadNetwork() {
-    assert(gNetworkBinSize == sizeof(Network) && "weights.bin size mismatch with Network struct");
-    return reinterpret_cast<const Network*>(gNetworkBinData);
+
+
+void Network::load() {
+	char *ptr = (char *)gnetworkWeightsData;
+	memcpy(feature_weights, ptr, sizeof(feature_weights));
+	ptr += sizeof(feature_weights);
+	memcpy(feature_bias, ptr, sizeof(feature_bias));
+	ptr += sizeof(feature_bias);
+	memcpy(output_weights, ptr, sizeof(output_weights));
+	ptr += sizeof(output_weights);
+	memcpy(&output_bias, ptr, sizeof(output_bias));
 }
 
+
+
 void init_accumulator(Accumulator& acc, const Network* net) {
-    for (int i = 0; i < HIDDEN_SIZE; i++)
+    for (int i = 0; i < HIDDEN_SIZE; i++){
         acc.vals[i] = net->feature_bias[i];
+        std::cout<<"FUCCK "<<acc.vals[i]<<"\n";
+    }
+        
 }
 
 int32_t evaluate(const Network* net, const Accumulator& us, const Accumulator& them) {
@@ -78,7 +109,8 @@ int32_t evaluate(const Network* net, const Accumulator& us, const Accumulator& t
     output += static_cast<int32_t>(net->output_bias);
 
     // Apply eval scaling and normalize
-    output = output * SCALE / (QA * QB);
+    output *= SCALE;
+    output /= (QA * QB);
 
     return output;
 }
